@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import React, { useState, useEffect } from 'react';
 import ModalForm from './components/ModalForm';
 import RoomList from './components/RoomList';
@@ -5,6 +6,7 @@ import ChatRoom from './components/ChatRoom';
 import { socket } from './websocket';
 import { Room } from './types/Room';
 import { Message } from './types/Message';
+import classNames from 'classnames';
 
 export const App: React.FC = () => {
   const [username, setUsername] = useState<string | null>(
@@ -26,22 +28,26 @@ export const App: React.FC = () => {
 
       switch (data.type) {
         case 'room_list':
+          console.log(data.rooms);
           const sanitizedRooms = data.rooms.map(
-            (room: { [x: string]: any; messages: any }) => {
+            (room: { [x: string]: any; messages: Message[] }) => {
               const { messages, ...sanitizedRoom } = room;
 
-              return sanitizedRoom;
+              return {
+                ...sanitizedRoom,
+                lastMessage: messages[0],
+              };
             },
-          );
+          ) as Room[];
 
           setRoomList(sanitizedRooms);
 
-          const allMessages = data.rooms.reduce(
-            (acc: any, room: { messages: any }) => [...acc, ...room.messages],
-            [],
-          );
+          // const allMessages = data.rooms.reduce(
+          //   (acc: any, room: { messages: any }) => [...acc, ...room.messages],
+          //   [],
+          // );
 
-          setChatLog(allMessages);
+          // setChatLog(allMessages);
           break;
 
         case 'message':
@@ -110,8 +116,19 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-blue-500 text-white py-4 text-center">
-        <h1 className="text-2xl">Group chat</h1>
+      <header className="bg-blue-500 text-white py-4 flex items-center justify-center">
+        <button
+          className={classNames('ml-4 hidden', {
+            'sm:hidden': !selectedRoom,
+            'sm:block': selectedRoom,
+          })}
+          onClick={() => setSelectedRoom(null)}
+        >
+          Back
+        </button>
+        <div className="mx-auto">
+          <h1 className="text-2xl">Group chat</h1>
+        </div>
       </header>
       {error ? (
         <div className="flex-grow bg-white p-4">
@@ -134,8 +151,13 @@ export const App: React.FC = () => {
           )}
           {username && !isCreate && (
             <>
-              <aside className="bg-gray-200 p-4 w-1/4">
-                <div className="flex justify-between">
+              <aside
+                className={classNames('bg-white w-1/4', {
+                  'sm:w-full': !selectedRoom,
+                  'sm:hidden': selectedRoom,
+                })}
+              >
+                <div className="flex justify-between p-4">
                   <button
                     type="button"
                     className="bg-blue-500 text-white py-2 px-4 rounded"
@@ -151,9 +173,17 @@ export const App: React.FC = () => {
                     Create room
                   </button>
                 </div>
-                <RoomList rooms={roomList} onSelectRoom={handleSelectRoom} />
+                <RoomList
+                  rooms={roomList}
+                  onSelectRoom={handleSelectRoom}
+                  selectedRoom={selectedRoom}
+                />
               </aside>
-              <section className="flex-grow p-4">
+              <section
+                className={classNames('flex-grow p-4', {
+                  'sm:hidden': !selectedRoom,
+                })}
+              >
                 {selectedRoom ? (
                   <ChatRoom room={selectedRoom} chatLog={chatLog} />
                 ) : (
